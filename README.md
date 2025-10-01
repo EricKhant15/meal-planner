@@ -62,7 +62,7 @@ npm install
 ```
 
 3. Set up environment variables:
-Create a `.env.local` file in the root directory:
+Create a `.env` file in the root directory:
 ```env
 MONGODB_URI=mongodb://localhost:27017/meal-planner
 NEXTAUTH_URL=http://localhost:3000
