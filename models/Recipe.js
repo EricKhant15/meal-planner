@@ -31,15 +31,15 @@ const RecipeSchema = new mongoose.Schema({
   }],
   prepTime: {
     type: Number, // in minutes
-    required: true,
+    default: 0,
   },
   cookTime: {
     type: Number, // in minutes
-    required: true,
+    default: 0,
   },
   servings: {
     type: Number,
-    required: true,
+    default: 1,
   },
   difficulty: {
     type: String,

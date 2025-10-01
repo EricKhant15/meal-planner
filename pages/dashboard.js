@@ -1,7 +1,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { TrashIcon, XMarkIcon, PlusIcon, CalendarDaysIcon, BookOpenIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, XMarkIcon, PlusIcon, CalendarDaysIcon, BookOpenIcon, PencilIcon, CogIcon } from '@heroicons/react/24/outline';
 import CustomSelect from '../components/CustomSelect';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
 
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -43,7 +44,7 @@ export default function Dashboard() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch('/api/recipes');
+      const response = await fetch('/api/recipes?all=true');
       const data = await response.json();
       setRecipes(data);
     } catch (error) {
@@ -52,6 +53,7 @@ export default function Dashboard() {
       setIsLoading(false);
     }
   };
+
 
   const fetchMealPlans = async () => {
     try {
@@ -116,7 +118,13 @@ export default function Dashboard() {
 
   const handleDeleteConfirm = async () => {
     if (deleteItem) {
-      await handleDelete(deleteItem._id);
+      if (deleteItem.recipes) {
+        // It's a meal plan
+        await handleDelete(deleteItem._id);
+      } else {
+        // It's a recipe
+        await handleDeleteRecipe(deleteItem._id);
+      }
       setShowDeleteConfirm(false);
       setDeleteItem(null);
     }
@@ -186,6 +194,7 @@ export default function Dashboard() {
     }
   };
 
+
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#e2e8f0] to-[#cbd5e1] flex items-center justify-center">
@@ -227,6 +236,14 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-slate-700 text-lg font-medium">Welcome, {session.user.name}</span>
+              <CustomButton
+                onClick={() => router.push('/manage-recipes')}
+                variant="primary"
+                size="md"
+              >
+                <CogIcon className="w-4 h-4 mr-2" />
+                Manage Recipes
+              </CustomButton>
               <CustomButton
                 onClick={() => signOut()}
                 variant="danger"
@@ -279,9 +296,9 @@ export default function Dashboard() {
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
               <h2 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-600 to-slate-700 bg-clip-text text-transparent mb-2">
-                Your Recipe Collection
+                Recipe Collection
               </h2>
-                  <p className="text-slate-800/70 text-lg">Discover and manage your favorite recipes 🍽️✨</p>
+              <p className="text-slate-800/70 text-lg">Discover and explore all available recipes 🍽️✨</p>
             </div>
             
             {isLoading ? (
@@ -290,34 +307,65 @@ export default function Dashboard() {
                 <p className="mt-6 text-slate-600 text-lg">Loading recipes...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {recipes.map((recipe) => (
-                  <div key={recipe._id} className="bg-white/60 backdrop-blur-md border border-slate-200/50 rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 group hover:bg-white/70 hover:border-slate-300/60">
-                    <div className="h-48 overflow-hidden">
+                  <div key={recipe._id} className="group relative bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] hover:-translate-y-2">
+                    {/* Image Container */}
+                    <div className="relative h-56 overflow-hidden">
                       <RecipeImage
                         src={recipe.photo}
                         alt={recipe.name}
-                        className="w-full h-full hover:scale-110 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xl font-bold text-slate-800">{recipe.name}</h3>
-                        <span className="text-xs text-slate-800/60 bg-white/10 px-3 py-1 rounded-full">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      {/* Author Badge */}
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-white/90 backdrop-blur-sm text-slate-700 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
                           {recipe.createdBy?.name || 'Unknown'}
                         </span>
                       </div>
-                      <p className="text-slate-800/70 text-sm mb-4 line-clamp-2">{recipe.description}</p>
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="p-6">
+                      <div className="mb-3">
+                        <h3 className="text-xl font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors duration-200">
+                          {recipe.name}
+                        </h3>
+                        <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed">
+                          {recipe.description}
+                        </p>
+                      </div>
+                      
+                      {/* Badges */}
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="bg-gradient-to-r from-blue-500 to-blue-600 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
                           {recipe.category}
                         </span>
-                        <span className="bg-gradient-to-r from-green-500 to-green-600 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm ${
+                          recipe.difficulty === 'Easy' 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                            : recipe.difficulty === 'Medium'
+                            ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                            : 'bg-gradient-to-r from-red-500 to-red-600'
+                        }`}>
                           {recipe.difficulty}
                         </span>
-                        <span className="bg-gradient-to-r from-purple-500 to-purple-600 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-sm">
                           {recipe.prepTime + recipe.cookTime} min
                         </span>
+                      </div>
+                      
+                      {/* Footer */}
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Created {new Date(recipe.createdAt).toLocaleDateString()}</span>
+                        <button 
+                          onClick={() => router.push(`/recipe/${recipe._id}`)}
+                          className="text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors duration-200"
+                        >
+                          View Details
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -335,6 +383,7 @@ export default function Dashboard() {
             )}
           </div>
         )}
+
 
         {activeTab === 'meals' && (
           <div className="px-4 py-6 sm:px-0">
@@ -534,6 +583,7 @@ export default function Dashboard() {
               newRecipeData={newRecipeData}
               setNewRecipeData={setNewRecipeData}
             />
+
 
             <DeleteConfirmDialog
               isOpen={showDeleteConfirm}
